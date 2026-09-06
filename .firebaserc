@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "eightes-town"
+  },
+  "targets": {
+    "eightes-town": {
+      "hosting": {
+        "candycatch-site": [
+          "eightes-candycatch"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

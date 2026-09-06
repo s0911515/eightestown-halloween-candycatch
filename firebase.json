@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "target": "candycatch-site",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/.git/**",
+      "**/node_modules/**"
+    ]
+  }
+}
