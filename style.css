@@ -100,10 +100,10 @@ body{
   flex: 0 0 auto;
   margin: 1px 0 8px;
   text-align:center;
-  font-size: clamp(18px, 5.5vw, 26px);
+  font-size: clamp(15px, 4.6vw, 21px);
   font-weight: 900;
   color: var(--purple);
-  text-wrap: balance;
+  white-space: nowrap;
 }
 
 .hud{

@@ -237,7 +237,7 @@ var SCORES_COLLECTION = "candycatch_scores";
     { key: "star",     good: true,  weight: 6,  score: 40, r: 14 },
     { key: "peanut",   good: true,  weight: 5,  score: 25, r: 13, effect: "double",  effectSeconds: 10 },
     { key: "hourglass",good: true,  weight: 5,  score: 5,  r: 13, effect: "time",    effectValue: 5 },
-    { key: "bat",      good: false, weight: 14, score: 0,  r: 15, losesLife: true },
+    { key: "bat",      good: false, weight: 14, score: 0,  r: 15, sizeMul: 1.4, losesLife: true },
     { key: "spider",   good: false, weight: 10, score: 0,  r: 13, losesLife: true, effect: "shrink",  effectSeconds: 4 },
     { key: "cursed",   good: false, weight: 6,  score: 0,  r: 19, sizeMul: 1.5, losesLife: false, effect: "reverse", effectSeconds: 3 }
   ];
@@ -410,7 +410,7 @@ var SCORES_COLLECTION = "candycatch_scores";
         rows.push({ id: d.id, name: data.name, score: data.score });
       });
       var madeTop = renderLeaderboard(rows);
-      playCountEl.textContent = "総プレイ回数: " + results[1].data().count + "回";
+      playCountEl.textContent = "みんなの総プレイ回数: " + results[1].data().count + "回";
       rankinBanner.hidden = !madeTop;
     });
   }
@@ -757,9 +757,8 @@ var SCORES_COLLECTION = "candycatch_scores";
         it.x += Math.sin(it.age * 5 + it.phase) * 60 * dt;
         it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
       } else if (it.type.key === "bat"){
-        var homingVX = (rayX - it.x) * 0.9;
-        var flutterVX = Math.sin(it.age * 6 + it.phase) * 55;
-        it.x += (homingVX + flutterVX) * dt;
+        var flutterVX = Math.sin(it.age * 5 + it.phase) * 65;
+        it.x += flutterVX * dt;
         it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
       }
 
