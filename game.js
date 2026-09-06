@@ -126,6 +126,14 @@ var SCORES_COLLECTION = "candycatch_scores";
     bgm.play().catch(function(){ bgmStarted = false; });
   }
 
+  document.addEventListener("visibilitychange", function(){
+    if (document.hidden){
+      bgm.pause();
+    } else if (bgmStarted && !muted){
+      bgm.play().catch(function(){});
+    }
+  });
+
   // ---------- ray sprite sheet ----------
   var raySheetImg = document.getElementById("raySheet");
   var SHEET_COLS = 4, SHEET_ROWS = 2, SHEET_FRAMES = SHEET_COLS * SHEET_ROWS;
