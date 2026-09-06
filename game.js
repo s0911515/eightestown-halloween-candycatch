@@ -216,7 +216,11 @@ var SCORES_COLLECTION = "candycatch_scores";
   var doubleScoreTimer = 0;
   var reverseTimer = 0;
   var shrinkTimer = 0;
+  var starBuffTimer = 0;
   var raySizeScale = 1;
+
+  var STAR_BUFF_SECONDS = 7;
+  var STAR_SPEED_MULT = 1.8;
 
   var RAY_BASELINE_Y = 555;
   var RAY_R = 34;
@@ -262,12 +266,18 @@ var SCORES_COLLECTION = "candycatch_scores";
 
   function spawnItem(){
     var t = pickType();
-    var margin = t.r + 6;
+    var sizeMul = t.key === "spider" ? (1 + Math.random() * 2) : (t.sizeMul || 1);
+    var effR = t.r * sizeMul;
+    var margin = effR + 6;
+    var vy = lerp(120, 230, difficultyProgress()) + Math.random() * 30;
+    if (t.key === "bat") vy *= 0.72;
     items.push({
       type: t,
+      sizeMul: sizeMul,
+      r: effR,
       x: margin + Math.random() * (LOGICAL_W - margin * 2),
       y: -20,
-      vy: lerp(120, 230, difficultyProgress()) + Math.random() * 30,
+      vy: vy,
       rot: Math.random() * Math.PI * 2,
       vrot: (Math.random() - 0.5) * 2.2,
       age: 0,
@@ -296,7 +306,7 @@ var SCORES_COLLECTION = "candycatch_scores";
     items = []; popups = [];
     rayX = rayTargetX = LOGICAL_W / 2;
     rayAnim.frame = 0; rayAnim.timer = 0;
-    doubleScoreTimer = 0; reverseTimer = 0; shrinkTimer = 0; raySizeScale = 1;
+    doubleScoreTimer = 0; reverseTimer = 0; shrinkTimer = 0; starBuffTimer = 0; raySizeScale = 1;
     scheduleSpawn();
     updateHud();
   }
@@ -558,6 +568,22 @@ var SCORES_COLLECTION = "candycatch_scores";
     var left = rayX - dims.w / 2;
     var top = RAY_BASELINE_Y - dims.h;
     var confused = reverseTimer > 0;
+    var starred = starBuffTimer > 0;
+
+    if (starred){
+      ctx.save();
+      var glowPulse = 0.75 + 0.25 * Math.sin(t * 0.012);
+      var glowR = dims.w * 0.95 * glowPulse;
+      var glowCy = top + dims.h / 2;
+      var grad = ctx.createRadialGradient(rayX, glowCy, 4, rayX, glowCy, glowR);
+      grad.addColorStop(0, "rgba(240,180,41,0.55)");
+      grad.addColorStop(1, "rgba(240,180,41,0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(rayX, glowCy, glowR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     // soft ground shadow
     ctx.save();
@@ -593,6 +619,10 @@ var SCORES_COLLECTION = "candycatch_scores";
     }
     if (confused){
       ctx.filter = "hue-rotate(140deg) saturate(1.8)";
+    }
+    if (starred){
+      ctx.shadowColor = "rgba(240,180,41,0.95)";
+      ctx.shadowBlur = 18 + Math.sin(t * 0.02) * 6;
     }
     ctx.drawImage(raySheetImg, sx, sy, frameW, frameH, left + wobble, top, dims.w, dims.h);
     ctx.restore();
@@ -648,7 +678,7 @@ var SCORES_COLLECTION = "candycatch_scores";
     if (!entry || !entry.ready) return;
     if (it.type.key === "cursed") drawCursedAura(it);
     var iw = entry.img.naturalWidth, ih = entry.img.naturalHeight;
-    var scale = (ITEM_BOX * (it.type.sizeMul || 1)) / Math.max(iw, ih);
+    var scale = (ITEM_BOX * it.sizeMul) / Math.max(iw, ih);
     var w = iw * scale, h = ih * scale;
     ctx.save();
     ctx.translate(it.x, it.y);
@@ -675,7 +705,8 @@ var SCORES_COLLECTION = "candycatch_scores";
 
     var prevRayX = rayX;
     var reversed = reverseTimer > 0;
-    var step = MOVE_SPEED * dt;
+    var speedMult = starBuffTimer > 0 ? STAR_SPEED_MULT : 1;
+    var step = MOVE_SPEED * speedMult * dt;
     if (dragging){
       var dragTarget = reversed ? (LOGICAL_W - rayTargetX) : rayTargetX;
       var diff = dragTarget - rayX;
@@ -711,6 +742,7 @@ var SCORES_COLLECTION = "candycatch_scores";
     if (doubleScoreTimer > 0) doubleScoreTimer = Math.max(0, doubleScoreTimer - dt);
     if (reverseTimer > 0) reverseTimer = Math.max(0, reverseTimer - dt);
     if (shrinkTimer > 0) shrinkTimer = Math.max(0, shrinkTimer - dt);
+    if (starBuffTimer > 0) starBuffTimer = Math.max(0, starBuffTimer - dt);
     raySizeScale = shrinkTimer > 0 ? SHRINK_SCALE : 1;
 
     var basket = getBasketPoint();
@@ -723,12 +755,17 @@ var SCORES_COLLECTION = "candycatch_scores";
       it.rot += it.vrot * dt;
       if (it.type.key === "cursed"){
         it.x += Math.sin(it.age * 5 + it.phase) * 60 * dt;
-        it.x = Math.max(it.type.r + 4, Math.min(LOGICAL_W - it.type.r - 4, it.x));
+        it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
+      } else if (it.type.key === "bat"){
+        var homingVX = (rayX - it.x) * 0.9;
+        var flutterVX = Math.sin(it.age * 6 + it.phase) * 55;
+        it.x += (homingVX + flutterVX) * dt;
+        it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
       }
 
       var dx = it.x - basket.x, dy = it.y - basket.y;
       var dist = Math.sqrt(dx * dx + dy * dy);
-      var caught = dist < (catchRadius * 0.7 + it.type.r);
+      var caught = dist < (catchRadius * 0.7 + it.r);
 
       if (caught){
         items.splice(i, 1);
@@ -750,10 +787,16 @@ var SCORES_COLLECTION = "candycatch_scores";
             addPopup(it.x, it.y - 18, "+" + it.type.effectValue + "びょう", "#8FD9C4");
             sfxBonus();
           } else if (it.type.key === "star"){
+            starBuffTimer = STAR_BUFF_SECONDS;
+            addPopup(it.x, it.y - 18, "無敵タイム!", "#F0B429");
             sfxBonus();
           } else {
             sfxCatch();
           }
+        } else if (starBuffTimer > 0){
+          streak++;
+          addPopup(it.x, it.y, "無敵!", "#F0B429");
+          sfxCatch();
         } else {
           streak = 0;
           if (it.type.losesLife){
