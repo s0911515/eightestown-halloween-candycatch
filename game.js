@@ -153,7 +153,6 @@ var SCORES_COLLECTION = "candycatch_scores";
     star: "assets/items/item_star.png",
     peanut: "assets/items/item_peanut.png",
     hourglass: "assets/items/item_clock.png",
-    bat: "assets/items/item_bat.png",
     spider: "assets/items/item_spider.png",
     cursed: "assets/items/item_cursed-candy.png"
   };
@@ -165,6 +164,19 @@ var SCORES_COLLECTION = "candycatch_scores";
     img.src = ITEM_IMAGE_SRC[key];
     ITEM_IMAGES[key] = entry;
   });
+
+  // ---------- bat flap sprite sheet ----------
+  var BAT_SHEET_FRAMES = [
+    { sx: 97,  sy: 65,  sw: 316, sh: 374 }, // wings raised
+    { sx: 526, sy: 175, sw: 481, sh: 264 }, // wings spread (mid)
+    { sx: 133, sy: 615, sw: 242, sh: 316 }, // wings lowered
+    { sx: 522, sy: 615, sw: 487, sh: 268 }  // wings spread (mid, rising)
+  ];
+  var BAT_FLAP_FPS = 8;
+  var batSheetImg = new Image();
+  var batSheetReady = false;
+  batSheetImg.addEventListener("load", function(){ batSheetReady = true; });
+  batSheetImg.src = "assets/items/bat-flap-sheet.png";
 
   // ---------- background art ----------
   var bgImage = new Image();
@@ -673,7 +685,20 @@ var SCORES_COLLECTION = "candycatch_scores";
     ctx.restore();
   }
 
+  function drawBatItem(it){
+    if (!batSheetReady) return;
+    var frameIdx = Math.floor(it.age * BAT_FLAP_FPS) % BAT_SHEET_FRAMES.length;
+    var f = BAT_SHEET_FRAMES[frameIdx];
+    var scale = (ITEM_BOX * it.sizeMul) / Math.max(f.sw, f.sh);
+    var w = f.sw * scale, h = f.sh * scale;
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    ctx.drawImage(batSheetImg, f.sx, f.sy, f.sw, f.sh, -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+
   function drawItem(it){
+    if (it.type.key === "bat"){ drawBatItem(it); return; }
     var entry = ITEM_IMAGES[it.type.key];
     if (!entry || !entry.ready) return;
     if (it.type.key === "cursed") drawCursedAura(it);
