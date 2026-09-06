@@ -40,6 +40,7 @@ var SCORES_COLLECTION = "candycatch_scores";
   var timeEl = document.getElementById("timeVal");
   var livesEl = document.getElementById("livesVal");
   var startOverlay = document.getElementById("startOverlay");
+  var loadingOverlay = document.getElementById("loadingOverlay");
   var endOverlay = document.getElementById("endOverlay");
   var startBtn = document.getElementById("startBtn");
   var retryBtn = document.getElementById("retryBtn");
@@ -171,7 +172,7 @@ var SCORES_COLLECTION = "candycatch_scores";
     { sx: 133, sy: 615, sw: 242, sh: 316 }, // wings lowered
     { sx: 522, sy: 615, sw: 487, sh: 268 }  // wings spread (mid, rising)
   ];
-  var BAT_FLAP_FPS = 8;
+  var BAT_FLAP_FPS = 6;
   var batSheetImg = new Image();
   var batSheetReady = false;
   batSheetImg.addEventListener("load", function(){ batSheetReady = true; });
@@ -184,7 +185,7 @@ var SCORES_COLLECTION = "candycatch_scores";
     { sx: 39,  sy: 556, sw: 439, sh: 360 }, // tripod B
     { sx: 582, sy: 556, sw: 375, sh: 310 }  // legs gathered
   ];
-  var SPIDER_WALK_FPS = 9;
+  var SPIDER_WALK_FPS = 7;
   var spiderSheetImg = new Image();
   var spiderSheetReady = false;
   spiderSheetImg.addEventListener("load", function(){ spiderSheetReady = true; });
@@ -195,6 +196,44 @@ var SCORES_COLLECTION = "candycatch_scores";
   var bgReady = false;
   bgImage.addEventListener("load", function(){ bgReady = true; });
   bgImage.src = "assets/backgrounds/background.jpg";
+
+  // ---------- loading gate ----------
+  // hides the loading screen only once every visual asset is ready, so the
+  // player never sees the game mid-load (missing background, placeholder shapes, etc.)
+  function whenAllLoaded(images, cb){
+    var pending = images.length;
+    var done = false;
+    function finish(){
+      if (done) return;
+      done = true;
+      clearTimeout(safety);
+      cb();
+    }
+    if (pending === 0){ finish(); return; }
+    var safety = setTimeout(finish, 8000);
+    images.forEach(function(img){
+      if (img.complete && img.naturalWidth){
+        pending--;
+        if (pending <= 0) finish();
+        return;
+      }
+      img.addEventListener("load", function(){
+        pending--;
+        if (pending <= 0) finish();
+      });
+      img.addEventListener("error", function(){
+        pending--;
+        if (pending <= 0) finish();
+      });
+    });
+  }
+
+  var loadTargets = [bgImage, raySheetImg, batSheetImg, spiderSheetImg];
+  Object.keys(ITEM_IMAGES).forEach(function(key){ loadTargets.push(ITEM_IMAGES[key].img); });
+  whenAllLoaded(loadTargets, function(){
+    loadingOverlay.hidden = true;
+    startOverlay.hidden = false;
+  });
 
   // ---------- sound ----------
   var audioCtx = null;
@@ -290,11 +329,12 @@ var SCORES_COLLECTION = "candycatch_scores";
 
   function spawnItem(){
     var t = pickType();
-    var sizeMul = t.key === "spider" ? (1 + Math.random() * 2) : (t.sizeMul || 1);
+    var sizeMul = t.key === "spider" ? (1 + Math.random() * 1.5) : (t.sizeMul || 1);
     var effR = t.r * sizeMul;
     var margin = effR + 6;
     var vy = lerp(120, 230, difficultyProgress()) + Math.random() * 30;
-    if (t.key === "bat") vy *= 0.72;
+    if (t.key === "bat") vy *= 0.55;
+    if (t.key === "spider") vy *= 0.8;
     items.push({
       type: t,
       sizeMul: sizeMul,
@@ -807,11 +847,11 @@ var SCORES_COLLECTION = "candycatch_scores";
         it.x += Math.sin(it.age * 5 + it.phase) * 60 * dt;
         it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
       } else if (it.type.key === "bat"){
-        var flutterVX = Math.sin(it.age * 5 + it.phase) * 65;
+        var flutterVX = Math.sin(it.age * 3.5 + it.phase) * 42;
         it.x += flutterVX * dt;
         it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
       } else if (it.type.key === "spider"){
-        var creepVX = (rayX - it.x) * 0.55 + Math.sin(it.age * 9 + it.phase) * 22;
+        var creepVX = (rayX - it.x) * 0.35 + Math.sin(it.age * 6 + it.phase) * 14;
         it.x += creepVX * dt;
         it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
       }

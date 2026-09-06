@@ -222,6 +222,32 @@ canvas{
   font-weight: 900;
 }
 
+.loading-overlay{
+  background: linear-gradient(180deg, #2E1F45 0%, #4A3168 55%, #6B4A8C 100%);
+  backdrop-filter: none;
+}
+
+.loading-spinner{
+  font-size: 44px;
+  animation: loading-spin 1.1s linear infinite;
+}
+
+@keyframes loading-spin{
+  0%{ transform: rotate(0deg) scale(1); }
+  50%{ transform: rotate(180deg) scale(1.12); }
+  100%{ transform: rotate(360deg) scale(1); }
+}
+
+.loading-text{
+  color: #EFE6FA;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .loading-spinner{ animation: none; }
+}
+
 .countdown-overlay{
   background: rgba(46,31,69,0.45);
 }
