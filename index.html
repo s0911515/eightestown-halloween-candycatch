@@ -51,11 +51,24 @@
         <button class="play-btn" id="startBtn">スタート!</button>
       </div>
 
-      <div class="overlay" id="endOverlay" hidden>
+      <div class="overlay end-overlay" id="endOverlay" hidden>
         <h2 id="endTitle">タイムアップ!</h2>
         <div class="result-score" id="finalScore">0</div>
         <div class="result-best" id="bestScore"></div>
-        <div class="result-rank" id="rankBadge"></div>
+        <div class="rankin-banner" id="rankinBanner" hidden>🎉 ランクイン!おめでとう!</div>
+
+        <div class="leaderboard">
+          <div class="leaderboard-title">🏆 みんなのランキング TOP5</div>
+          <ol class="leaderboard-list" id="leaderboardList"></ol>
+          <div class="play-count" id="playCount"></div>
+        </div>
+
+        <div class="name-field">
+          <input type="text" id="nameInput" maxlength="20" placeholder="名無しのおばけさん" aria-label="表示名">
+          <button class="name-save-btn" id="nameSaveBtn">保存</button>
+        </div>
+        <div class="name-save-status" id="nameSaveStatus" aria-live="polite"></div>
+
         <button class="play-btn" id="retryBtn">もういちどあそぶ</button>
       </div>
 
@@ -70,7 +83,8 @@
 </div>
 
 <img id="raySheet" class="sr-only-asset" src="assets/ray/ray-catch-walk.png" alt="">
+<audio id="bgm" src="assets/sound/background.mp3" preload="auto"></audio>
 
-<script src="game.js"></script>
+<script type="module" src="game.js"></script>
 </body>
 </html>

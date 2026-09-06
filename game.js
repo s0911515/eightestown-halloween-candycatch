@@ -1,3 +1,30 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  updateDoc,
+  doc,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+  getCountFromServer,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+var firebaseConfig = {
+  apiKey: "AIzaSyDBCxwWsDQwNz8ouXC7v81HKX-yVk_MrJ8",
+  authDomain: "eightes-town.firebaseapp.com",
+  projectId: "eightes-town",
+  storageBucket: "eightes-town.firebasestorage.app",
+  messagingSenderId: "508136911390",
+  appId: "1:508136911390:web:4213ac2a9e60be4c01740f"
+};
+var firebaseApp = initializeApp(firebaseConfig);
+var db = getFirestore(firebaseApp);
+var SCORES_COLLECTION = "candycatch_scores";
+
 (function(){
   "use strict";
 
@@ -20,17 +47,30 @@
   var bestPreview = document.getElementById("bestPreview");
   var finalScoreEl = document.getElementById("finalScore");
   var bestScoreEl = document.getElementById("bestScore");
-  var rankBadge = document.getElementById("rankBadge");
   var endTitle = document.getElementById("endTitle");
+  var rankinBanner = document.getElementById("rankinBanner");
+  var leaderboardList = document.getElementById("leaderboardList");
+  var playCountEl = document.getElementById("playCount");
+  var nameInput = document.getElementById("nameInput");
+  var nameSaveBtn = document.getElementById("nameSaveBtn");
+  var nameSaveStatus = document.getElementById("nameSaveStatus");
+  var bgm = document.getElementById("bgm");
 
   var BEST_KEY = "candycatch_best_v1";
   var MUTE_KEY = "candycatch_muted_v1";
+  var NAME_KEY = "candycatch_name_v1";
+  var DEFAULT_NAME = "名無しのおばけさん";
   var best = parseInt(localStorage.getItem(BEST_KEY) || "0", 10) || 0;
   var muted = localStorage.getItem(MUTE_KEY) === "1";
+  var cachedName = localStorage.getItem(NAME_KEY) || "";
+  var currentScoreDocId = null;
+
+  nameInput.value = cachedName;
 
   function refreshMuteBtn(){
     muteBtn.textContent = muted ? "🔇" : "🔊";
     muteBtn.setAttribute("aria-pressed", muted ? "true" : "false");
+    bgm.muted = muted;
   }
   refreshMuteBtn();
   bestPreview.textContent = best > 0 ? "これまでの最高得点: " + best : "";
@@ -40,6 +80,50 @@
     localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
     refreshMuteBtn();
   });
+
+  // ---------- background music ----------
+  var BGM_VOLUME = 0.45;
+  var BGM_FADE_OUT_SEC = 1.6;
+  var BGM_PAUSE_SEC = 1.2;
+  var BGM_FADE_IN_SEC = 0.6;
+  var bgmStarted = false;
+  var bgmFading = false;
+  bgm.volume = BGM_VOLUME;
+  bgm.muted = muted;
+
+  function fadeAudio(target, seconds, onDone){
+    var startVol = bgm.volume;
+    var startTs = performance.now();
+    function step(ts){
+      var t = Math.min(1, (ts - startTs) / (seconds * 1000));
+      bgm.volume = startVol + (target - startVol) * t;
+      if (t < 1) requestAnimationFrame(step);
+      else if (onDone) onDone();
+    }
+    requestAnimationFrame(step);
+  }
+
+  bgm.addEventListener("timeupdate", function(){
+    if (bgmFading || !bgm.duration) return;
+    if (bgm.currentTime >= bgm.duration - BGM_FADE_OUT_SEC){
+      bgmFading = true;
+      fadeAudio(0, BGM_FADE_OUT_SEC, function(){
+        bgm.pause();
+        setTimeout(function(){
+          bgm.currentTime = 0;
+          bgm.play();
+          fadeAudio(BGM_VOLUME, BGM_FADE_IN_SEC, function(){ bgmFading = false; });
+        }, BGM_PAUSE_SEC * 1000);
+      });
+    }
+  });
+
+  function startBgm(){
+    if (bgmStarted) return;
+    bgmStarted = true;
+    bgm.volume = BGM_VOLUME;
+    bgm.play().catch(function(){ bgmStarted = false; });
+  }
 
   // ---------- ray sprite sheet ----------
   var raySheetImg = document.getElementById("raySheet");
@@ -241,6 +325,7 @@
   function startGame(){
     ensureAudio();
     if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    startBgm();
     resetGame();
     state = "countdown";
     startOverlay.hidden = true;
@@ -249,20 +334,126 @@
     showCountdownStep(0);
   }
 
+  function triggerTitleEmerge(text){
+    endTitle.textContent = text;
+    endTitle.classList.remove("show");
+    void endTitle.offsetWidth;
+    endTitle.classList.add("show");
+  }
+
+  function animateScoreCountUp(target, duration){
+    var startTs = null;
+    function step(ts){
+      if (startTs === null) startTs = ts;
+      var t = Math.min(1, (ts - startTs) / duration);
+      var eased = 1 - Math.pow(1 - t, 3);
+      finalScoreEl.textContent = Math.round(target * eased);
+      if (t < 1) requestAnimationFrame(step);
+      else finalScoreEl.textContent = target;
+    }
+    requestAnimationFrame(step);
+  }
+
+  function buildLeaderboardRow(rank, name, rowScore, isMe){
+    var li = document.createElement("li");
+    if (isMe) li.classList.add("me");
+    var rankEl = document.createElement("span");
+    rankEl.className = "leaderboard-rank";
+    rankEl.textContent = rank;
+    var nameEl = document.createElement("span");
+    nameEl.className = "leaderboard-name";
+    nameEl.textContent = name;
+    var scoreEl = document.createElement("span");
+    scoreEl.className = "leaderboard-score";
+    scoreEl.textContent = rowScore;
+    li.appendChild(rankEl);
+    li.appendChild(nameEl);
+    li.appendChild(scoreEl);
+    return li;
+  }
+
+  function renderLeaderboard(rows){
+    leaderboardList.innerHTML = "";
+    if (!rows.length){
+      var li = document.createElement("li");
+      li.className = "leaderboard-empty";
+      li.textContent = "まだ記録がありません";
+      leaderboardList.appendChild(li);
+      return false;
+    }
+    var madeTop = false;
+    rows.forEach(function(row, i){
+      var isMe = row.id === currentScoreDocId;
+      if (isMe) madeTop = true;
+      leaderboardList.appendChild(buildLeaderboardRow(i + 1, row.name, row.score, isMe));
+    });
+    return madeTop;
+  }
+
+  function refreshLeaderboard(){
+    var scoresRef = collection(db, SCORES_COLLECTION);
+    var topQuery = query(scoresRef, orderBy("score", "desc"), limit(5));
+    return Promise.all([getDocs(topQuery), getCountFromServer(scoresRef)]).then(function(results){
+      var rows = [];
+      results[0].forEach(function(d){
+        var data = d.data();
+        rows.push({ id: d.id, name: data.name, score: data.score });
+      });
+      var madeTop = renderLeaderboard(rows);
+      playCountEl.textContent = "総プレイ回数: " + results[1].data().count + "回";
+      rankinBanner.hidden = !madeTop;
+    });
+  }
+
+  function submitScoreAndShowLeaderboard(finalScore){
+    var nameToSave = (cachedName || "").trim() || DEFAULT_NAME;
+    playCountEl.textContent = "読み込み中…";
+    leaderboardList.innerHTML = "";
+    rankinBanner.hidden = true;
+    currentScoreDocId = null;
+
+    addDoc(collection(db, SCORES_COLLECTION), {
+      name: nameToSave,
+      score: finalScore,
+      createdAt: serverTimestamp()
+    }).then(function(docRef){
+      currentScoreDocId = docRef.id;
+      return refreshLeaderboard();
+    }).catch(function(err){
+      console.error("score submit failed", err);
+      playCountEl.textContent = "ランキングを取得できませんでした";
+    });
+  }
+
+  nameSaveBtn.addEventListener("click", function(){
+    var val = nameInput.value.trim();
+    cachedName = val;
+    localStorage.setItem(NAME_KEY, val);
+    if (!currentScoreDocId){
+      nameSaveStatus.textContent = "保存しました";
+      return;
+    }
+    updateDoc(doc(db, SCORES_COLLECTION, currentScoreDocId), { name: val || DEFAULT_NAME }).then(function(){
+      nameSaveStatus.textContent = "保存しました!";
+      return refreshLeaderboard();
+    }).catch(function(err){
+      console.error("name update failed", err);
+      nameSaveStatus.textContent = "保存に失敗しました";
+    });
+  });
+
   function endGame(){
     state = "over";
     if (score > best){
       best = score;
       localStorage.setItem(BEST_KEY, String(best));
     }
-    endTitle.textContent = lives <= 0 ? "ライフがなくなった!" : "タイムアップ!";
-    finalScoreEl.textContent = score;
+    triggerTitleEmerge(lives <= 0 ? "ライフがなくなった!" : "タイムアップ!");
     bestScoreEl.textContent = "さいこう記録: " + best + (score === best && score > 0 ? "(新記録!)" : "");
-    var rank = "見習いおばけ 👻";
-    if (score >= 450) rank = "ハロウィンレジェンド 🏆";
-    else if (score >= 250) rank = "キャンディハンター 🍬";
-    else if (score >= 100) rank = "パンプキン見習い 🎃";
-    rankBadge.textContent = rank;
+    nameInput.value = cachedName;
+    nameSaveStatus.textContent = "";
+    animateScoreCountUp(score, 1100);
+    submitScoreAndShowLeaderboard(score);
     endOverlay.hidden = false;
   }
 

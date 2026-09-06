@@ -2,3 +2,6 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 .firebase/
+.agents/
+.claude/
+skills-lock.json
