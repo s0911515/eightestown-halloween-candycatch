@@ -262,6 +262,18 @@ var SCORES_COLLECTION = "candycatch_scores";
   function sfxHit(){ tone(160, 0.22, "sawtooth", 0.14); }
   function sfxCombo(){ tone(760, 0.08, "square", 0.12); setTimeout(function(){ tone(1020, 0.12, "square", 0.14); }, 60); }
 
+  var knockbackAudio = new Audio("assets/sound/吹き飛ばし.mp3");
+  var dizzyAudio = new Audio("assets/sound/めまい.mp3");
+  function playOneShot(audio){
+    if (muted) return;
+    try {
+      audio.currentTime = 0;
+      audio.play();
+    } catch (e) { /* ignore playback errors */ }
+  }
+  function sfxKnockback(){ playOneShot(knockbackAudio); }
+  function sfxDizzy(){ playOneShot(dizzyAudio); }
+
   // ---------- state ----------
   var state = "start"; // start | playing | over
   var rayX = LOGICAL_W / 2;
@@ -274,7 +286,10 @@ var SCORES_COLLECTION = "candycatch_scores";
   var spawnTimer = 0;
   var items = [];
   var popups = [];
+  var knockbacks = [];
   var lastTs = null;
+  var KNOCKBACK_GRAVITY = 700;
+  var KNOCKBACK_SCORE = 15;
 
   var doubleScoreTimer = 0;
   var reverseTimer = 0;
@@ -354,6 +369,23 @@ var SCORES_COLLECTION = "candycatch_scores";
     popups.push({ x: x, y: y, text: text, color: color, life: 0.8, t: 0 });
   }
 
+  function spawnKnockback(it){
+    var dir = it.x < rayX ? -1 : 1;
+    if (Math.abs(it.x - rayX) < 8) dir = Math.random() < 0.5 ? -1 : 1;
+    knockbacks.push({
+      type: it.type,
+      sizeMul: it.sizeMul,
+      x: it.x,
+      y: it.y,
+      rot: it.rot,
+      vrot: (Math.random() - 0.5) * 16,
+      age: it.age,
+      phase: it.phase,
+      kvx: dir * (160 + Math.random() * 160),
+      kvy: -(420 + Math.random() * 160)
+    });
+  }
+
   function updateHud(){
     scoreEl.textContent = score;
     timeEl.textContent = Math.max(0, Math.ceil(timeLeft));
@@ -367,7 +399,7 @@ var SCORES_COLLECTION = "candycatch_scores";
 
   function resetGame(){
     score = 0; lives = 3; timeLeft = GAME_DURATION; elapsed = 0; streak = 0;
-    items = []; popups = [];
+    items = []; popups = []; knockbacks = [];
     rayX = rayTargetX = LOGICAL_W / 2;
     rayAnim.frame = 0; rayAnim.timer = 0;
     doubleScoreTimer = 0; reverseTimer = 0; shrinkTimer = 0; starBuffTimer = 0; raySizeScale = 1;
@@ -737,6 +769,42 @@ var SCORES_COLLECTION = "candycatch_scores";
     ctx.restore();
   }
 
+  function drawStarAura(it){
+    var pulse = 0.75 + 0.25 * Math.sin(it.age * 5);
+    var glowR = ITEM_BOX * 1.15 * pulse;
+
+    ctx.save();
+    var grad = ctx.createRadialGradient(it.x, it.y, 3, it.x, it.y, glowR);
+    grad.addColorStop(0, "rgba(240,180,41,0.7)");
+    grad.addColorStop(0.55, "rgba(240,180,41,0.28)");
+    grad.addColorStop(1, "rgba(240,180,41,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(it.x, it.y, glowR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    var sparkleCount = 4;
+    for (var s = 0; s < sparkleCount; s++){
+      var ang = it.age * 2.4 + s * (Math.PI * 2 / sparkleCount);
+      var dist = ITEM_BOX * 0.6;
+      var sx = it.x + Math.cos(ang) * dist;
+      var sy = it.y + Math.sin(ang) * dist * 0.75;
+      var tw = 0.35 + 0.65 * Math.abs(Math.sin(it.age * 6 + s * 2));
+      ctx.save();
+      ctx.globalAlpha = tw;
+      ctx.translate(sx, sy);
+      ctx.rotate(ang);
+      ctx.fillStyle = "#FFF4C2";
+      ctx.beginPath();
+      ctx.moveTo(0, -6); ctx.lineTo(1.6, -1.6); ctx.lineTo(6, 0); ctx.lineTo(1.6, 1.6);
+      ctx.lineTo(0, 6); ctx.lineTo(-1.6, 1.6); ctx.lineTo(-6, 0); ctx.lineTo(-1.6, -1.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   function drawBatItem(it){
     if (!batSheetReady) return;
     var frameIdx = Math.floor(it.age * BAT_FLAP_FPS) % BAT_SHEET_FRAMES.length;
@@ -767,6 +835,7 @@ var SCORES_COLLECTION = "candycatch_scores";
     var entry = ITEM_IMAGES[it.type.key];
     if (!entry || !entry.ready) return;
     if (it.type.key === "cursed") drawCursedAura(it);
+    if (it.type.key === "star") drawStarAura(it);
     var iw = entry.img.naturalWidth, ih = entry.img.naturalHeight;
     var scale = (ITEM_BOX * it.sizeMul) / Math.max(iw, ih);
     var w = iw * scale, h = ih * scale;
@@ -843,15 +912,12 @@ var SCORES_COLLECTION = "candycatch_scores";
       it.age += dt;
       it.y += it.vy * dt;
       it.rot += it.vrot * dt;
-      if (it.type.key === "cursed"){
-        it.x += Math.sin(it.age * 5 + it.phase) * 60 * dt;
-        it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
-      } else if (it.type.key === "bat"){
+      if (it.type.key === "bat"){
         var flutterVX = Math.sin(it.age * 3.5 + it.phase) * 42;
         it.x += flutterVX * dt;
         it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
       } else if (it.type.key === "spider"){
-        var creepVX = (rayX - it.x) * 0.35 + Math.sin(it.age * 6 + it.phase) * 14;
+        var creepVX = Math.sin(it.age * 6 + it.phase) * 14;
         it.x += creepVX * dt;
         it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
       }
@@ -888,8 +954,10 @@ var SCORES_COLLECTION = "candycatch_scores";
           }
         } else if (starBuffTimer > 0){
           streak++;
-          addPopup(it.x, it.y, "無敵!", "#F0B429");
-          sfxCatch();
+          score += KNOCKBACK_SCORE;
+          addPopup(it.x, it.y, "+" + KNOCKBACK_SCORE, "#F0B429");
+          spawnKnockback(it);
+          sfxKnockback();
         } else {
           streak = 0;
           if (it.type.losesLife){
@@ -898,7 +966,7 @@ var SCORES_COLLECTION = "candycatch_scores";
           } else {
             addPopup(it.x, it.y, "しまった!", "#C9A6E0");
           }
-          sfxHit();
+          if (it.type.key === "cursed") sfxDizzy(); else sfxHit();
 
           if (it.type.effect === "shrink"){
             shrinkTimer = it.type.effectSeconds;
@@ -918,6 +986,18 @@ var SCORES_COLLECTION = "candycatch_scores";
       if (it.y > LOGICAL_H + 30) items.splice(i, 1);
     }
 
+    for (var kIdx = knockbacks.length - 1; kIdx >= 0; kIdx--){
+      var kb = knockbacks[kIdx];
+      kb.age += dt;
+      kb.kvy += KNOCKBACK_GRAVITY * dt;
+      kb.x += kb.kvx * dt;
+      kb.y += kb.kvy * dt;
+      kb.rot += kb.vrot * dt;
+      if (kb.y > LOGICAL_H + 80 || kb.y < -120 || kb.x < -120 || kb.x > LOGICAL_W + 120){
+        knockbacks.splice(kIdx, 1);
+      }
+    }
+
     for (var j = popups.length - 1; j >= 0; j--){
       popups[j].life -= dt;
       popups[j].t += dt;
@@ -931,6 +1011,7 @@ var SCORES_COLLECTION = "candycatch_scores";
   function render(t){
     drawBackground(t);
     items.forEach(drawItem);
+    knockbacks.forEach(drawItem);
     drawRay(t);
     drawPopups();
   }

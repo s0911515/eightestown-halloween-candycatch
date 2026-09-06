@@ -213,6 +213,7 @@ canvas{
   text-align:center;
   background: rgba(46,31,69,0.72);
   backdrop-filter: blur(1px);
+  overflow-y: auto;
 }
 
 .overlay h2{
@@ -483,6 +484,21 @@ canvas{
   text-align:center;
   font-size: 11px;
   color: var(--ink-soft);
+}
+
+@media (pointer: coarse){
+  /* keyboard hint is meaningless on touchscreens; hiding it also
+     reclaims a little vertical room on short phones like iPhone SE */
+  .hint{ display: none; }
+}
+
+.credit{
+  flex: 0 0 auto;
+  margin: 2px 0 0;
+  text-align: center;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: rgba(239,230,250,0.65);
 }
 
 [hidden]{ display:none !important; }
