@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>エイテス太のキャンディキャッチ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="stage">
+  <svg class="deco bat1" viewBox="0 0 64 40" fill="none" aria-hidden="true"><path d="M32 14c-3-8-14-12-20-6 4 0 8 3 9 7-6-3-15-2-17 5 5-2 10-1 13 2-5 1-9 5-9 10 4-2 8-6 10-6l14 6 14-6c2 0 6 4 10 6 0-5-4-9-9-10 3-3 8-4 13-2-2-7-11-8-17-5 1-4 5-7 9-7-6-6-17-2-20 6z" fill="#3D2A5C"/></svg>
+  <svg class="deco bat2" viewBox="0 0 64 40" fill="none" aria-hidden="true"><path d="M32 14c-3-8-14-12-20-6 4 0 8 3 9 7-6-3-15-2-17 5 5-2 10-1 13 2-5 1-9 5-9 10 4-2 8-6 10-6l14 6 14-6c2 0 6 4 10 6 0-5-4-9-9-10 3-3 8-4 13-2-2-7-11-8-17-5 1-4 5-7 9-7-6-6-17-2-20 6z" fill="#5B3B8C"/></svg>
+  <svg class="deco star1" viewBox="0 0 24 24" fill="#F0B429" aria-hidden="true"><path d="M12 1l2.9 7.3L22 11l-7.1 2.7L12 21l-2.9-7.3L2 11l7.1-2.7z"/></svg>
+  <svg class="deco star2" viewBox="0 0 24 24" fill="#E8792B" aria-hidden="true"><path d="M12 1l2.9 7.3L22 11l-7.1 2.7L12 21l-2.9-7.3L2 11l7.1-2.7z"/></svg>
+
+  <main class="card">
+    <div class="eyebrow">EIGHTESTOWN HALLOWEEN 2026</div>
+    <h1 class="title">エイテス太のキャンディキャッチ</h1>
+
+    <div class="hud">
+      <div class="hud-item">
+        <div class="hud-label">スコア</div>
+        <div class="hud-value" id="scoreVal">0</div>
+      </div>
+      <div class="hud-item">
+        <div class="hud-label">のこり時間</div>
+        <div class="hud-value" id="timeVal">60</div>
+      </div>
+      <button class="mute-btn" id="muteBtn" aria-label="音を切り替え" aria-pressed="false">🔊</button>
+    </div>
+
+    <div class="frame-wrap">
+    <div class="frame">
+      <canvas id="game" width="360" height="600" aria-label="キャンディキャッチのゲーム画面"></canvas>
+
+      <div class="lives-badge" id="livesVal">👻👻👻</div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>あそびかた</h2>
+        <ul>
+          <li>👆 なぞって左右に移動</li>
+          <li>🍬🧺 キャンディをキャッチ!</li>
+          <li>🦇🕷️ 危ないアイテムは回避</li>
+          <li>⏱️ 制限時間60秒</li>
+        </ul>
+        <div class="result-best" id="bestPreview"></div>
+        <button class="play-btn" id="startBtn">スタート!</button>
+      </div>
+
+      <div class="overlay" id="endOverlay" hidden>
+        <h2 id="endTitle">タイムアップ!</h2>
+        <div class="result-score" id="finalScore">0</div>
+        <div class="result-best" id="bestScore"></div>
+        <div class="result-rank" id="rankBadge"></div>
+        <button class="play-btn" id="retryBtn">もういちどあそぶ</button>
+      </div>
+
+      <div class="overlay countdown-overlay" id="countdownOverlay" hidden>
+        <div class="countdown-num" id="countdownNum">3</div>
+      </div>
+    </div>
+    </div>
+
+    <p class="hint">PCでは ← → キーでも操作できます</p>
+  </main>
+</div>
+
+<img id="raySheet" class="sr-only-asset" src="assets/ray/ray-catch-walk.png" alt="">
+
+<script src="game.js"></script>
+</body>
+</html>

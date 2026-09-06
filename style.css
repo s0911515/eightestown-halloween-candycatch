@@ -1,0 +1,307 @@
+:root{
+  --cream: #F7EEDC;
+  --cream-card: #FFFBF2;
+  --ink: #2E1F45;
+  --ink-soft: #5B4B78;
+  --purple: #5B3B8C;
+  --purple-deep: #3D2A5C;
+  --orange: #E8792B;
+  --orange-deep: #C05A17;
+  --danger: #7A3B6B;
+  --gold: #F0B429;
+  --line: rgba(46,31,69,0.14);
+  --shadow: rgba(61,42,92,0.22);
+}
+
+*{ box-sizing:border-box; }
+
+html, body{
+  margin:0;
+  height: 100%;
+  background: var(--cream);
+  overflow: hidden;
+}
+
+body{
+  color: var(--ink);
+  font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+  display:flex;
+  justify-content:center;
+  padding: 8px;
+  height: 100dvh;
+}
+
+.sr-only-asset{
+  position:absolute;
+  width:1px; height:1px;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+}
+
+.stage{
+  position:relative;
+  width:100%;
+  max-width: 420px;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+}
+
+.deco{
+  position:absolute;
+  pointer-events:none;
+  opacity:0.55;
+  z-index:0;
+}
+.deco.bat1{ top:-4px; left:-8px; width:30px; animation: float-a 7s ease-in-out infinite; }
+.deco.bat2{ top:34px; right:-10px; width:22px; animation: float-b 8.5s ease-in-out infinite; }
+.deco.star1{ top:110px; left:-10px; width:18px; animation: float-b 6s ease-in-out infinite; }
+.deco.star2{ bottom:50px; right:-8px; width:16px; animation: float-a 5.5s ease-in-out infinite; }
+
+@keyframes float-a{
+  0%,100%{ transform: translateY(0) rotate(-4deg); }
+  50%{ transform: translateY(-10px) rotate(4deg); }
+}
+@keyframes float-b{
+  0%,100%{ transform: translateY(0) rotate(3deg); }
+  50%{ transform: translateY(12px) rotate(-3deg); }
+}
+@media (prefers-reduced-motion: reduce){
+  .deco{ animation: none !important; }
+}
+
+.card{
+  position:relative;
+  z-index:1;
+  background: var(--cream-card);
+  border: 2px solid var(--ink);
+  border-radius: 22px;
+  padding: 12px 14px 10px;
+  box-shadow: 0 14px 0 -6px var(--shadow), 0 18px 30px var(--shadow);
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  min-height:0;
+}
+
+.eyebrow{
+  flex: 0 0 auto;
+  text-align:center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--orange-deep);
+}
+
+.title{
+  flex: 0 0 auto;
+  margin: 1px 0 8px;
+  text-align:center;
+  font-size: clamp(18px, 5.5vw, 26px);
+  font-weight: 900;
+  color: var(--purple);
+  text-wrap: balance;
+}
+
+.hud{
+  flex: 0 0 auto;
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.hud-item{
+  flex:1;
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 4px 8px;
+  text-align:center;
+}
+
+.hud-label{
+  font-size: 10px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
+
+.hud-value{
+  font-family: "Fredoka", "Zen Maru Gothic", sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--ink);
+}
+
+.hud-value.time-low{ color: var(--danger); }
+
+.lives-badge{
+  position:absolute;
+  top:8px;
+  left:8px;
+  background: rgba(46,31,69,0.55);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+  padding: 3px 9px;
+  letter-spacing: 3px;
+  font-size: 14px;
+  color:#fff;
+  pointer-events:none;
+}
+.lives-badge span.lost{ opacity: 0.3; filter: grayscale(1); }
+
+.mute-btn{
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: var(--cream);
+  font-size: 17px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.mute-btn:focus-visible, button:focus-visible{
+  outline: 3px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.frame-wrap{
+  flex: 1 1 auto;
+  min-height: 0;
+  display:flex;
+  justify-content:center;
+}
+
+.frame{
+  position:relative;
+  height:100%;
+  width:auto;
+  max-width:100%;
+  aspect-ratio: 3 / 5;
+  border-radius: 16px;
+  overflow:hidden;
+  border: 2px solid var(--ink);
+  background: linear-gradient(180deg, #2E1F45 0%, #4A3168 55%, #6B4A8C 100%);
+}
+
+canvas{
+  display:block;
+  width:100%;
+  height:100%;
+  touch-action:none;
+}
+
+.overlay{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap: 14px;
+  padding: 24px;
+  text-align:center;
+  background: rgba(46,31,69,0.72);
+  backdrop-filter: blur(1px);
+}
+
+.overlay h2{
+  margin:0;
+  color: #FFFBF2;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.countdown-overlay{
+  background: rgba(46,31,69,0.45);
+}
+
+.countdown-num{
+  font-family: "Fredoka", "Zen Maru Gothic", sans-serif;
+  font-weight: 700;
+  font-size: 84px;
+  line-height: 1;
+  color: #F0B429;
+  text-shadow: 0 0 24px rgba(240,180,41,0.75), 0 4px 0 rgba(46,31,69,0.6);
+  white-space: nowrap;
+}
+
+.countdown-num.go{
+  font-size: 34px;
+  letter-spacing: 0.02em;
+}
+
+.countdown-num.pop{
+  animation: countdown-pop 0.7s cubic-bezier(.2,.9,.3,1.2);
+}
+
+@keyframes countdown-pop{
+  0%{ transform: scale(0.3); opacity: 0; }
+  35%{ transform: scale(1.15); opacity: 1; }
+  100%{ transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .countdown-num.pop{ animation: none; }
+}
+
+.overlay ul{
+  margin:0;
+  padding:0;
+  list-style:none;
+  color: #EFE6FA;
+  font-size: 13.5px;
+  line-height: 1.9;
+}
+
+.overlay .result-score{
+  font-family: "Fredoka", sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--gold);
+  line-height:1;
+}
+
+.overlay .result-best{
+  color: #EFE6FA;
+  font-size: 12.5px;
+}
+
+.overlay .result-rank{
+  color: #FFFBF2;
+  font-size: 15px;
+  font-weight: 700;
+  background: rgba(232,121,43,0.35);
+  border: 1px solid rgba(240,180,41,0.6);
+  padding: 4px 14px;
+  border-radius: 999px;
+}
+
+.play-btn{
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  color: #FFFBF2;
+  background: var(--orange);
+  border: none;
+  border-radius: 999px;
+  padding: 11px 30px;
+  cursor:pointer;
+  box-shadow: 0 4px 0 var(--orange-deep);
+}
+.play-btn:active{ transform: translateY(2px); box-shadow: 0 2px 0 var(--orange-deep); }
+
+.hint{
+  flex: 0 0 auto;
+  margin: 6px 2px 0;
+  text-align:center;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+[hidden]{ display:none !important; }
