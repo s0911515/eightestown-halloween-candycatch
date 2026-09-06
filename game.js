@@ -153,7 +153,6 @@ var SCORES_COLLECTION = "candycatch_scores";
     star: "assets/items/item_star.png",
     peanut: "assets/items/item_peanut.png",
     hourglass: "assets/items/item_clock.png",
-    spider: "assets/items/item_spider.png",
     cursed: "assets/items/item_cursed-candy.png"
   };
   var ITEM_IMAGES = {};
@@ -177,6 +176,19 @@ var SCORES_COLLECTION = "candycatch_scores";
   var batSheetReady = false;
   batSheetImg.addEventListener("load", function(){ batSheetReady = true; });
   batSheetImg.src = "assets/items/bat-flap-sheet.png";
+
+  // ---------- spider crawl sprite sheet ----------
+  var SPIDER_SHEET_FRAMES = [
+    { sx: 38,  sy: 91,  sw: 455, sh: 347 }, // tripod A
+    { sx: 584, sy: 91,  sw: 373, sh: 317 }, // legs gathered
+    { sx: 39,  sy: 556, sw: 439, sh: 360 }, // tripod B
+    { sx: 582, sy: 556, sw: 375, sh: 310 }  // legs gathered
+  ];
+  var SPIDER_WALK_FPS = 9;
+  var spiderSheetImg = new Image();
+  var spiderSheetReady = false;
+  spiderSheetImg.addEventListener("load", function(){ spiderSheetReady = true; });
+  spiderSheetImg.src = "assets/items/spider-crawl-sheet.png";
 
   // ---------- background art ----------
   var bgImage = new Image();
@@ -697,8 +709,21 @@ var SCORES_COLLECTION = "candycatch_scores";
     ctx.restore();
   }
 
+  function drawSpiderItem(it){
+    if (!spiderSheetReady) return;
+    var frameIdx = Math.floor(it.age * SPIDER_WALK_FPS) % SPIDER_SHEET_FRAMES.length;
+    var f = SPIDER_SHEET_FRAMES[frameIdx];
+    var scale = (ITEM_BOX * it.sizeMul) / Math.max(f.sw, f.sh);
+    var w = f.sw * scale, h = f.sh * scale;
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    ctx.drawImage(spiderSheetImg, f.sx, f.sy, f.sw, f.sh, -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+
   function drawItem(it){
     if (it.type.key === "bat"){ drawBatItem(it); return; }
+    if (it.type.key === "spider"){ drawSpiderItem(it); return; }
     var entry = ITEM_IMAGES[it.type.key];
     if (!entry || !entry.ready) return;
     if (it.type.key === "cursed") drawCursedAura(it);
@@ -784,6 +809,10 @@ var SCORES_COLLECTION = "candycatch_scores";
       } else if (it.type.key === "bat"){
         var flutterVX = Math.sin(it.age * 5 + it.phase) * 65;
         it.x += flutterVX * dt;
+        it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
+      } else if (it.type.key === "spider"){
+        var creepVX = (rayX - it.x) * 0.55 + Math.sin(it.age * 9 + it.phase) * 22;
+        it.x += creepVX * dt;
         it.x = Math.max(it.r + 4, Math.min(LOGICAL_W - it.r - 4, it.x));
       }
 
