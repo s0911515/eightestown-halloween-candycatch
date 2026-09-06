@@ -1,15 +1,9 @@
 {
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
   "hosting": {
     "target": "candycatch-site",
     "public": ".",
     "ignore": [
       "firebase.json",
-      "firestore.rules",
-      "firestore.indexes.json",
       ".github/**",
       "**/.*",
       "**/.git/**",
