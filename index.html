@@ -30,7 +30,7 @@
       </div>
       <div class="hud-item">
         <div class="hud-label">のこり時間</div>
-        <div class="hud-value" id="timeVal">60</div>
+        <div class="hud-value" id="timeVal">45</div>
       </div>
       <button class="mute-btn" id="muteBtn" aria-label="音を切り替え" aria-pressed="false">🔊</button>
     </div>
@@ -53,11 +53,11 @@
           <li>👆 画面をなぞって左右に移動</li>
           <li>🍬 キャンディをかごでキャッチしよう★</li>
           <li>🕷️ イタズラはうまくよけて！</li>
-          <li>⏱️ 制限時間は60秒</li>
+          <li>⏱️ 制限時間は45秒</li>
         </ul>
         <div class="result-best" id="bestPreview"></div>
         <button class="play-btn" id="startBtn">スタート!</button>
-        <p class="credit">BGM「What do you play?」by えだまめ88<br>効果音: Springin' Sound Stock</p>
+        <p class="credit">BGM「What do you play?」by えだまめ88<br>効果音: Springin' Sound Stock, chiru, ZOO</p>
       </div>
 
       <div class="overlay end-overlay" id="endOverlay" hidden>
@@ -83,6 +83,10 @@
 
       <div class="overlay countdown-overlay" id="countdownOverlay" hidden>
         <div class="countdown-num" id="countdownNum">3</div>
+      </div>
+
+      <div class="overlay timeup-overlay" id="timeupOverlay" hidden>
+        <div class="timeup-text" id="timeupText">TIMEUP</div>
       </div>
     </div>
     </div>

@@ -56,6 +56,8 @@ var SCORES_COLLECTION = "candycatch_scores";
   var nameSaveBtn = document.getElementById("nameSaveBtn");
   var nameSaveStatus = document.getElementById("nameSaveStatus");
   var bgm = document.getElementById("bgm");
+  var timeupOverlay = document.getElementById("timeupOverlay");
+  var timeupText = document.getElementById("timeupText");
 
   var BEST_KEY = "candycatch_best_v1";
   var MUTE_KEY = "candycatch_muted_v1";
@@ -267,11 +269,13 @@ var SCORES_COLLECTION = "candycatch_scores";
   }
   function sfxCatch(){ tone(660, 0.12, "triangle", 0.16); }
   function sfxBonus(){ tone(880, 0.1, "triangle", 0.18); setTimeout(function(){ tone(1180, 0.14, "triangle", 0.16); }, 70); }
-  function sfxHit(){ tone(160, 0.22, "sawtooth", 0.14); }
   function sfxCombo(){ tone(760, 0.08, "square", 0.12); setTimeout(function(){ tone(1020, 0.12, "square", 0.14); }, 60); }
 
   var knockbackAudio = new Audio("assets/sound/吹き飛ばし.mp3");
   var dizzyAudio = new Audio("assets/sound/めまい.mp3");
+  var damagedAudio = new Audio("assets/sound/damaged1.mp3");
+  var whistleAudio = new Audio("assets/sound/nc403489_【効果音】_「ピピー！」_試合終了や注意に.wav");
+  var tiuntiunAudio = new Audio("assets/sound/nc102944_【ロックマン】ティウンティウン効果音.wav");
   function playOneShot(audio){
     if (muted) return;
     try {
@@ -281,14 +285,17 @@ var SCORES_COLLECTION = "candycatch_scores";
   }
   function sfxKnockback(){ playOneShot(knockbackAudio); }
   function sfxDizzy(){ playOneShot(dizzyAudio); }
+  function sfxDamaged(){ playOneShot(damagedAudio); }
+  function sfxWhistle(){ playOneShot(whistleAudio); }
+  function sfxTiuntiun(){ playOneShot(tiuntiunAudio); }
 
   // ---------- state ----------
-  var state = "start"; // start | playing | over
+  var state = "start"; // start | playing | timeup | exploding | over
   var rayX = LOGICAL_W / 2;
   var rayTargetX = rayX;
   var dragging = false;
   var keyLeft = false, keyRight = false;
-  var GAME_DURATION = 60;
+  var GAME_DURATION = 45;
   var score = 0, lives = 3, timeLeft = GAME_DURATION, elapsed = 0;
   var streak = 0;
   var spawnTimer = 0;
@@ -296,6 +303,14 @@ var SCORES_COLLECTION = "candycatch_scores";
   var popups = [];
   var knockbacks = [];
   var lastTs = null;
+
+  // ---------- timeup / explosion transitions ----------
+  var TIMEUP_DELAY_SEC = 1.3;
+  var EXPLODE_DURATION_SEC = 1.3;
+  var EXPLODE_PARTICLE_COUNT = 16;
+  var EXPLODE_SPEED = 150;
+  var explodeParticles = [];
+  var explodeElapsed = 0;
   var KNOCKBACK_GRAVITY = 700;
   var KNOCKBACK_SCORE = 15;
 
@@ -320,7 +335,7 @@ var SCORES_COLLECTION = "candycatch_scores";
   var ITEM_TYPES = [
     { key: "candy",    good: true,  weight: 34, score: 10, r: 13 },
     { key: "pumpkin",  good: true,  weight: 20, score: 20, r: 15 },
-    { key: "star",     good: true,  weight: 6,  score: 40, r: 14 },
+    { key: "star",     good: true,  weight: 4,  score: 40, r: 14 },
     { key: "peanut",   good: true,  weight: 5,  score: 25, r: 13, effect: "double",  effectSeconds: 10 },
     { key: "hourglass",good: true,  weight: 5,  score: 5,  r: 13, effect: "time",    effectValue: 5 },
     { key: "bat",      good: false, weight: 14, score: 0,  r: 15, sizeMul: 1.4, losesLife: true },
@@ -405,12 +420,15 @@ var SCORES_COLLECTION = "candycatch_scores";
     livesEl.innerHTML = s;
   }
 
+  var rayHiddenByExplosion = false;
+
   function resetGame(){
     score = 0; lives = 3; timeLeft = GAME_DURATION; elapsed = 0; streak = 0;
     items = []; popups = []; knockbacks = [];
     rayX = rayTargetX = LOGICAL_W / 2;
     rayAnim.frame = 0; rayAnim.timer = 0;
     doubleScoreTimer = 0; reverseTimer = 0; shrinkTimer = 0; starBuffTimer = 0; raySizeScale = 1;
+    rayHiddenByExplosion = false;
     scheduleSpawn();
     updateHud();
   }
@@ -556,19 +574,79 @@ var SCORES_COLLECTION = "candycatch_scores";
     });
   });
 
-  function endGame(){
+  function finishGame(title){
     state = "over";
     if (score > best){
       best = score;
       localStorage.setItem(BEST_KEY, String(best));
     }
-    triggerTitleEmerge(lives <= 0 ? "ライフがなくなった!" : "タイムアップ!");
+    triggerTitleEmerge(title);
     bestScoreEl.textContent = "さいこう記録: " + best + (score === best && score > 0 ? "(新記録!)" : "");
     nameInput.value = cachedName;
     nameSaveStatus.textContent = "";
     animateScoreCountUp(score, 1100);
     submitScoreAndShowLeaderboard(score);
     endOverlay.hidden = false;
+  }
+
+  // タイムアップ: ホイッスル音+「TIMEUP」表示を挟んでから結果発表へ
+  function startTimeup(){
+    state = "timeup";
+    sfxWhistle();
+    timeupOverlay.hidden = false;
+    timeupText.classList.remove("show");
+    void timeupText.offsetWidth;
+    timeupText.classList.add("show");
+    setTimeout(function(){
+      timeupOverlay.hidden = true;
+      finishGame("タイムアップ!");
+    }, TIMEUP_DELAY_SEC * 1000);
+  }
+
+  // ライフ切れ: エイテス君が白い玉になって同心円状に弾け飛ぶ演出を挟んでから結果発表へ
+  function startExplosion(){
+    state = "exploding";
+    rayHiddenByExplosion = true;
+    explodeElapsed = 0;
+    var dims = raySpriteDims();
+    var cx = rayX, cy = RAY_BASELINE_Y - dims.h / 2;
+    explodeParticles = [];
+    for (var i = 0; i < EXPLODE_PARTICLE_COUNT; i++){
+      var angle = (i / EXPLODE_PARTICLE_COUNT) * Math.PI * 2;
+      explodeParticles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * EXPLODE_SPEED,
+        vy: Math.sin(angle) * EXPLODE_SPEED,
+        r: 5 + Math.random() * 3
+      });
+    }
+    sfxTiuntiun();
+  }
+
+  function updateExplosion(dt){
+    explodeElapsed += dt;
+    explodeParticles.forEach(function(p){
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    });
+    if (explodeElapsed >= EXPLODE_DURATION_SEC){
+      finishGame("ライフがなくなった!");
+    }
+  }
+
+  function drawExplosion(){
+    var fade = Math.max(0, 1 - explodeElapsed / EXPLODE_DURATION_SEC);
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.shadowColor = "rgba(255,255,255,0.9)";
+    ctx.shadowBlur = 10;
+    explodeParticles.forEach(function(p){
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
   }
 
   startBtn.addEventListener("click", startGame);
@@ -868,6 +946,7 @@ var SCORES_COLLECTION = "candycatch_scores";
 
   // ---------- loop ----------
   function update(dt){
+    if (state === "exploding"){ updateExplosion(dt); return; }
     if (state !== "playing") return;
 
     var prevRayX = rayX;
@@ -974,7 +1053,7 @@ var SCORES_COLLECTION = "candycatch_scores";
           } else {
             addPopup(it.x, it.y, "しまった!", "#C9A6E0");
           }
-          if (it.type.key === "cursed") sfxDizzy(); else sfxHit();
+          if (it.type.key === "cursed") sfxDizzy(); else sfxDamaged();
 
           if (it.type.effect === "shrink"){
             shrinkTimer = it.type.effectSeconds;
@@ -985,7 +1064,7 @@ var SCORES_COLLECTION = "candycatch_scores";
           }
 
           updateHud();
-          if (lives <= 0){ endGame(); return; }
+          if (lives <= 0){ startExplosion(); return; }
         }
         updateHud();
         continue;
@@ -1012,15 +1091,19 @@ var SCORES_COLLECTION = "candycatch_scores";
       if (popups[j].life <= 0) popups.splice(j, 1);
     }
 
-    if (timeLeft <= 0){ timeLeft = 0; updateHud(); endGame(); return; }
+    if (timeLeft <= 0){ timeLeft = 0; updateHud(); startTimeup(); return; }
     updateHud();
   }
 
   function render(t){
     drawBackground(t);
+    if (state === "exploding"){
+      drawExplosion();
+      return;
+    }
     items.forEach(drawItem);
     knockbacks.forEach(drawItem);
-    drawRay(t);
+    if (!rayHiddenByExplosion) drawRay(t);
     drawPopups();
   }
 

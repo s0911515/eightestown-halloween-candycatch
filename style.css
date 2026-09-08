@@ -282,6 +282,27 @@ canvas{
   .countdown-num.pop{ animation: none; }
 }
 
+.timeup-overlay{
+  background: rgba(46,31,69,0.55);
+}
+
+.timeup-text{
+  font-family: "Fredoka", "Zen Maru Gothic", sans-serif;
+  font-weight: 900;
+  font-size: 52px;
+  letter-spacing: 0.04em;
+  color: #FFFBF2;
+  text-shadow: 0 0 24px rgba(255,143,163,0.8), 0 4px 0 rgba(46,31,69,0.6);
+}
+
+.timeup-text.show{
+  animation: countdown-pop 0.7s cubic-bezier(.2,.9,.3,1.2);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .timeup-text.show{ animation: none; }
+}
+
 .overlay ul{
   margin:0;
   padding:0;
@@ -497,6 +518,7 @@ canvas{
   left:0;
   right:0;
   bottom:6px;
+  z-index: 5;
   text-align:center;
   font-size: 9px;
   letter-spacing: 0.03em;
