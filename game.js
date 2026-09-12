@@ -121,11 +121,15 @@ var SCORES_COLLECTION = "candycatch_scores";
     }
   });
 
+  // ゲーム開始のたびに呼ばれる。再生中でも停止中でも、必ず頭から鳴らし直す
+  // (長時間プレイでループ処理が止まってしまうケースの復帰も兼ねる)
   function startBgm(){
-    if (bgmStarted) return;
     bgmStarted = true;
+    bgmFading = false;
+    bgm.pause();
+    bgm.currentTime = 0;
     bgm.volume = BGM_VOLUME;
-    bgm.play().catch(function(){ bgmStarted = false; });
+    bgm.play().catch(function(){});
   }
 
   document.addEventListener("visibilitychange", function(){
@@ -338,9 +342,9 @@ var SCORES_COLLECTION = "candycatch_scores";
     { key: "star",     good: true,  weight: 4,  score: 40, r: 14 },
     { key: "peanut",   good: true,  weight: 5,  score: 25, r: 13, effect: "double",  effectSeconds: 10 },
     { key: "hourglass",good: true,  weight: 5,  score: 5,  r: 13, effect: "time",    effectValue: 5 },
-    { key: "bat",      good: false, weight: 14, score: 0,  r: 15, sizeMul: 1.4, losesLife: true },
-    { key: "spider",   good: false, weight: 10, score: 0,  r: 13, losesLife: true, effect: "shrink",  effectSeconds: 4 },
-    { key: "cursed",   good: false, weight: 6,  score: 0,  r: 19, sizeMul: 1.5, losesLife: false, effect: "reverse", effectSeconds: 3 }
+    { key: "bat",      good: false, weight: 12, score: 0,  r: 15, sizeMul: 1.4, losesLife: true },
+    { key: "spider",   good: false, weight: 9,  score: 0,  r: 13, losesLife: true, effect: "shrink",  effectSeconds: 4 },
+    { key: "cursed",   good: false, weight: 5,  score: 0,  r: 19, sizeMul: 1.5, losesLife: false, effect: "reverse", effectSeconds: 3 }
   ];
   var TOTAL_WEIGHT = ITEM_TYPES.reduce(function(s, t){ return s + t.weight; }, 0);
 
